@@ -1,0 +1,300 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   KosmodTS — Global Styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg-primary: #0d0d1a;
+  --bg-secondary: #141428;
+  --bg-cell: #1a1a2e;
+  --border-cell: #2a2a4a;
+  --border-active: #64ffb4;
+  --text-primary: #e0e0e8;
+  --text-secondary: #888;
+  --accent: #64ffb4;
+  --accent-alt: #64c8ff;
+  --error: #ff5050;
+  --warning: #ffdc28;
+  --font-mono: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'SF Mono', 'Consolas', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ─── Toolbar ─────────────────────────────────────────────────────────────── */
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-cell);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+#toolbar .logo {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--accent);
+  margin-right: 12px;
+  letter-spacing: 1px;
+}
+
+#toolbar button {
+  background: var(--bg-cell);
+  border: 1px solid var(--border-cell);
+  color: var(--text-primary);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#toolbar button:hover {
+  background: #252540;
+  border-color: var(--accent);
+}
+
+#toolbar .spacer {
+  flex: 1;
+}
+
+#toolbar .status {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* ─── Graph Container ─────────────────────────────────────────────────────── */
+
+#graph-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 50%, #14142800 0%, var(--bg-primary) 100%),
+    repeating-linear-gradient(0deg, transparent, transparent 19px, #1a1a2e22 19px, #1a1a2e22 20px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, #1a1a2e22 19px, #1a1a2e22 20px);
+}
+
+/* ─── Cell Overlay (positioned absolutely over the SVG graph) ─────────────── */
+
+.cell-overlay {
+  position: absolute;
+  pointer-events: all;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+}
+
+.code-cell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-cell);
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+.code-cell .cell-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #12122a;
+  border-bottom: 1px solid var(--border-cell);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: move;
+  user-select: none;
+}
+
+.code-cell .cell-header .cell-title {
+  flex: 1;
+  color: var(--accent-alt);
+  font-weight: 600;
+}
+
+.code-cell .cell-header .cell-type-badge {
+  background: #2a2a4a;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.code-cell .cell-header .cell-type-badge.class {
+  color: #c0a0ff;
+}
+
+.code-cell .cell-header .cell-type-badge.instance {
+  color: #80d0ff;
+}
+
+.code-cell .cell-header button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 2px;
+}
+
+.code-cell .cell-header button:hover {
+  color: var(--accent);
+}
+
+.code-cell .editor-area {
+  flex: 1;
+  min-height: 80px;
+  position: relative;
+  pointer-events: all;
+}
+
+.code-cell .result-panel {
+  border-top: 1px solid var(--border-cell);
+  background: #0e0e20;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+  font-size: 12px;
+  pointer-events: all;
+}
+
+.code-cell .result-panel.open {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.code-cell .result-panel .result-content {
+  padding: 6px 8px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.code-cell .result-panel .result-content.error {
+  color: var(--error);
+}
+
+.code-cell .result-panel .result-content.success {
+  color: var(--accent);
+}
+
+/* ─── Matrix Visualization ────────────────────────────────────────────────── */
+
+.matrix-grid {
+  display: inline-grid;
+  gap: 1px;
+  background: #0a0a14;
+  padding: 2px;
+  border-radius: 3px;
+}
+
+.matrix-grid .matrix-cell {
+  width: 28px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 2px;
+}
+
+/* ─── SysML Edge Labels ──────────────────────────────────────────────────── */
+
+.edge-label {
+  background: var(--bg-secondary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-cell);
+}
+
+/* ─── maxGraph overrides ──────────────────────────────────────────────────── */
+
+svg text {
+  font-family: var(--font-mono) !important;
+}
+
+/* ─── Landing Splash ──────────────────────────────────────────────────────── */
+
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 13, 26, 0.92);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+#splash .splash-inner {
+  text-align: center;
+  max-width: 480px;
+  padding: 32px;
+}
+
+#splash h1 {
+  font-size: 28px;
+  color: var(--accent);
+  margin-bottom: 12px;
+  letter-spacing: 2px;
+}
+
+#splash p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+#splash a {
+  color: var(--accent-alt);
+  text-decoration: none;
+}
+
+#splash a:hover {
+  text-decoration: underline;
+}
+
+#splash button {
+  margin-top: 16px;
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+  padding: 8px 28px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
