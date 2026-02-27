@@ -1,0 +1,9 @@
+{
+  "name": "teach-matrices",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Interactive matrix teaching tool — scientifically styled",
+  "scripts": {
+    "start": "node --experimental-strip-types app.ts"
+  }
+}
