@@ -1,37 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KosmodTS — TypeScript Canvas</title>
-  <meta name="description" content="Interactive TypeScript code cells on a 2D canvas with Monaco editors, matrix operations, and SysML-style dataflow connectors." />
-  <script type="module" crossorigin src="./assets/index-asbHVQ1u.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BGG2yTUQ.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeachMatrices</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0d0d1a;color:#c8c8d0;font-family:'Fira Code','JetBrains Mono','Cascadia Code','SF Mono','Consolas',monospace}
+.page{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+h1{font-size:26px;color:#64ffb4;letter-spacing:2px;margin-bottom:6px}
+.sub{color:#888;font-size:12px;margin-bottom:36px}
+.cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+.card{background:#141428;border:1px solid #2a2a4a;border-radius:8px;padding:28px 24px;width:300px;text-decoration:none;color:inherit;transition:border-color .2s,box-shadow .2s}
+.card:hover{border-color:#64ffb4;box-shadow:0 0 20px rgba(100,255,180,.08)}
+.card h2{font-size:16px;color:#64c8ff;margin-bottom:8px}
+.card p{font-size:12px;color:#888;line-height:1.6}
+.card .tag{display:inline-block;margin-top:12px;font-size:10px;color:#64ffb4;background:#1a2a1a;padding:2px 8px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px}
+footer{margin-top:40px;font-size:10px;color:#555;text-align:center;line-height:1.6}
+footer a{color:#64c8ff;text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
 </head>
 <body>
-  <div id="app">
-    <header id="toolbar">
-      <span class="logo">KosmodTS</span>
-      <button id="btn-add-cell" title="Add Code Cell">+ Cell</button>
-      <button id="btn-add-matrix" title="Add Matrix Cell">+ Matrix</button>
-      <button id="btn-run-all" title="Run All Cells">▶ Run All</button>
-      <button id="btn-layout" title="Auto Layout">⊞ Layout</button>
-      <button id="btn-fit" title="Fit to View">⊡ Fit</button>
-      <button id="btn-example" title="Load Example Pipeline">★ Example</button>
-      <span class="spacer"></span>
-      <span class="status" id="status-bar">Ready</span>
-    </header>
-    <div id="graph-container"></div>
-
-    <!-- Landing splash — dismisses on click -->
-    <div id="splash" onclick="this.remove()">
-      <div class="splash-inner">
-        <h1>KosmodTS</h1>
-        <p>Drag-and-drop TypeScript code cells on a 2D canvas — connect them with dataflow edges and watch results propagate in real time.</p>
-        <p>Built with <a href="https://github.com/maxGraph/maxGraph" target="_blank" rel="noopener">maxGraph</a> + <a href="https://microsoft.github.io/monaco-editor/" target="_blank" rel="noopener">Monaco Editor</a>. Forked from <a href="https://github.com/nicognaW/TypeScript-Website" target="_blank" rel="noopener">TypeScript-Website</a>.</p>
-        <button onclick="this.parentElement.parentElement.remove()">Enter ▸</button>
-      </div>
-    </div>
+<div class="page">
+  <h1>TeachMatrices</h1>
+  <p class="sub">Interactive matrix tools in the browser — no server required</p>
+  <div class="cards">
+    <a class="card" href="terminal/">
+      <h2>Terminal Lab</h2>
+      <p>A browser-based terminal for matrix operations — create, multiply, transpose, and visualize matrices with a Viridis colormap. Type commands, see results instantly.</p>
+      <span class="tag">terminal</span>
+    </a>
+    <a class="card" href="canvas/">
+      <h2>KosmodTS Canvas</h2>
+      <p>TypeScript code cells on a 2D canvas with Monaco editors. Connect cells with dataflow edges and watch results propagate through matrix pipelines in real time.</p>
+      <span class="tag">maxGraph + Monaco</span>
+    </a>
   </div>
+  <footer>
+    Forked from <a href="https://github.com/nicognaW/TypeScript-Website" target="_blank" rel="noopener">TypeScript-Website</a>.
+    Source on <a href="https://github.com/springyworks/TeachMatrices" target="_blank" rel="noopener">GitHub</a>.
+  </footer>
+</div>
 </body>
 </html>

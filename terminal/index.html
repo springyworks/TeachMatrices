@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeachMatrices — Interactive Matrix Laboratory</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0d0d1a;color:#c8c8d0;font-family:'Fira Code','JetBrains Mono','Cascadia Code','SF Mono','Consolas',monospace;font-size:14px;overflow:hidden}
+#terminal{display:flex;flex-direction:column;height:100vh;padding:0}
+#output{flex:1;overflow-y:auto;padding:8px 12px;white-space:pre-wrap;word-break:break-all;line-height:1.4}
+#output::-webkit-scrollbar{width:8px}
+#output::-webkit-scrollbar-track{background:#0d0d1a}
+#output::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
+#input-line{display:flex;align-items:center;padding:4px 12px 8px;border-top:1px solid #222;background:#0a0a14;flex-shrink:0}
+#prompt-label{color:#64ffb4;margin-right:6px;white-space:pre}
+#input{background:none;border:none;color:#e0e0e8;font:inherit;outline:none;flex:1;caret-color:#64ffb4}
+.bold{font-weight:bold}
+.dim{opacity:0.55}
+.cell{display:inline-block;text-align:right;padding:0}
+.bracket{color:#888}
+.error{color:#ff5050}
+.success{color:#64ffb4}
+.title-color{color:#64c8ff}
+.label-color{color:#c8c8ff}
+.accent{color:#ffdc28}
+.menu-key{color:#64ffb4}
+.dim-text{color:#888}
+.quit-key{color:#ff6464}
+</style>
+</head>
+<body>
+<div id="terminal">
+  <div id="output"></div>
+  <div id="input-line">
+    <span id="prompt-label">  choice&gt; </span>
+    <input id="input" autofocus autocomplete="off" spellcheck="false">
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TeachMatrices — Browser Terminal Edition
+//  Pure client-side, no server, no communication
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const outputEl = document.getElementById('output');
+const inputEl = document.getElementById('input');
+const promptEl = document.getElementById('prompt-label');
+
+// ─── HTML-safe output helpers ────────────────────────────────────────────────
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function write(html) {
+  outputEl.insertAdjacentHTML('beforeend', html);
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+function writeln(html) {
+  write(html + '\n');
+}
+
+function clearOutput() {
+  outputEl.innerHTML = '';
+}
+
+// ─── Colormap (Viridis-inspired) ─────────────────────────────────────────────
+
+const CMAP = [
+  [68,1,84],[72,35,116],[64,67,135],[52,94,141],
+  [33,144,140],[39,173,129],[92,200,99],[170,220,50],[253,231,37]
+];
+
+function cmapLerp(t) {
+  const v = Math.max(0, Math.min(1, t));
+  const n = CMAP.length - 1;
+  const idx = v * n;
+  const lo = Math.floor(idx), hi = Math.min(lo+1, n), f = idx - lo;
+  const a = CMAP[lo], b = CMAP[hi];
+  return [Math.round(a[0]+(b[0]-a[0])*f), Math.round(a[1]+(b[1]-a[1])*f), Math.round(a[2]+(b[2]-a[2])*f)];
+}
+
+function contrastFg(bg) {
+  return (0.299*bg[0]+0.587*bg[1]+0.114*bg[2]) > 140 ? [0,0,0] : [255,255,255];
+}
+
+function rgbStyle(c) { return `rgb(${c[0]},${c[1]},${c[2]})`; }
+
+// ─── Matrix Class ────────────────────────────────────────────────────────────
+
+class Matrix {
+  constructor(data, name) {
+    this.rows = data.length;
+    this.cols = data.length > 0 ? data[0].length : 0;
+    this.data = data.map(r => [...r]);
+    this.name = name || '';
+  }
+  static zeros(r, c, name) { return new Matrix(Array.from({length:r},()=>new Array(c).fill(0)), name); }
+  static ones(r, c, name) { return new Matrix(Array.from({length:r},()=>new Array(c).fill(1)), name); }
+  static identity(n, name) { return new Matrix(Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:0)), name); }
+  static random(rows, cols, min=0, max=9, ints=true, name) {
+    return new Matrix(Array.from({length:rows},()=>Array.from({length:cols},()=>{
+      const v=min+Math.random()*(max-min); return ints?Math.round(v):Math.round(v*100)/100;
+    })), name);
+  }
+  static scalar(v, name) { return new Matrix([[v]], name); }
+  static vector(vals, name) { return new Matrix(vals.map(v=>[v]), name); }
+  static rowVector(vals, name) { return new Matrix([vals], name); }
+
+  static tinyPicture(size, pattern, name) {
+    const d = Array.from({length:size},()=>new Array(size).fill(0));
+    if (pattern==='checker') { for(let r=0;r<size;r++) for(let c=0;c<size;c++) d[r][c]=(r+c)%2===0?255:0; }
+    else if (pattern==='gradient-h') { for(let r=0;r<size;r++) for(let c=0;c<size;c++) d[r][c]=Math.round(c/(size-1)*255); }
+    else if (pattern==='gradient-v') { for(let r=0;r<size;r++) for(let c=0;c<size;c++) d[r][c]=Math.round(r/(size-1)*255); }
+    else if (pattern==='circle') {
+      const cx=(size-1)/2,cy=(size-1)/2,rad=size/3;
+      for(let r=0;r<size;r++) for(let c=0;c<size;c++) d[r][c]=Math.sqrt((r-cy)**2+(c-cx)**2)<=rad?255:0;
+    } else if (pattern==='cross') {
+      const mid=Math.floor(size/2);
+      for(let r=0;r<size;r++) for(let c=0;c<size;c++) d[r][c]=(r===mid||c===mid)?255:0;
+    } else if (pattern==='diagonal') {
+      for(let r=0;r<size;r++) for(let c=0;c<size;c++) d[r][c]=(r===c||r===size-1-c)?255:0;
+    } else if (pattern==='wave') {
+      for(let r=0;r<size;r++) for(let c=0;c<size;c++) d[r][c]=Math.round(127.5+127.5*Math.sin(2*Math.PI*c/size+2*Math.PI*r/size));
+    } else if (pattern==='spiral') {
+      const cx=(size-1)/2,cy=(size-1)/2;
+      for(let r=0;r<size;r++) for(let c=0;c<size;c++){const dx=c-cx,dy=r-cy;d[r][c]=Math.round(127.5+127.5*Math.sin(Math.atan2(dy,dx)*3+Math.sqrt(dx*dx+dy*dy)*0.5));}
+    } else { for(let r=0;r<size;r++) for(let c=0;c<size;c++) d[r][c]=Math.round(Math.random()*255); }
+    return new Matrix(d, name);
+  }
+
+  get(r,c){return this.data[r][c];}
+  set(r,c,v){this.data[r][c]=v;}
+  isSquare(){return this.rows===this.cols;}
+  isVector(){return this.cols===1||this.rows===1;}
+  isScalar(){return this.rows===1&&this.cols===1;}
+
+  norm(){ let s=0; for(let r=0;r<this.rows;r++) for(let c=0;c<this.cols;c++) s+=this.data[r][c]**2; return Math.sqrt(s); }
+  trace(){ if(!this.isSquare()) throw new Error('Trace requires square matrix'); let t=0; for(let i=0;i<this.rows;i++) t+=this.data[i][i]; return t; }
+  min(){ let m=Infinity; for(let r=0;r<this.rows;r++) for(let c=0;c<this.cols;c++) if(this.data[r][c]<m) m=this.data[r][c]; return m; }
+  max(){ let m=-Infinity; for(let r=0;r<this.rows;r++) for(let c=0;c<this.cols;c++) if(this.data[r][c]>m) m=this.data[r][c]; return m; }
+
+  add(b){ if(this.rows!==b.rows||this.cols!==b.cols) throw new Error(`Dimension mismatch: (${this.rows}×${this.cols}) + (${b.rows}×${b.cols})`); return new Matrix(Array.from({length:this.rows},(_,r)=>Array.from({length:this.cols},(_,c)=>this.data[r][c]+b.data[r][c]))); }
+  subtract(b){ if(this.rows!==b.rows||this.cols!==b.cols) throw new Error(`Dimension mismatch`); return new Matrix(Array.from({length:this.rows},(_,r)=>Array.from({length:this.cols},(_,c)=>this.data[r][c]-b.data[r][c]))); }
+  scalarMultiply(s){ return new Matrix(Array.from({length:this.rows},(_,r)=>Array.from({length:this.cols},(_,c)=>Math.round(this.data[r][c]*s*1000)/1000))); }
+  multiply(b){ if(this.cols!==b.rows) throw new Error(`Cannot multiply (${this.rows}×${this.cols}) × (${b.rows}×${b.cols})`); return new Matrix(Array.from({length:this.rows},(_,r)=>Array.from({length:b.cols},(_,c)=>{let s=0;for(let k=0;k<this.cols;k++) s+=this.data[r][k]*b.data[k][c];return Math.round(s*1000)/1000;}))); }
+  hadamard(b){ if(this.rows!==b.rows||this.cols!==b.cols) throw new Error('Dimension mismatch for Hadamard'); return new Matrix(Array.from({length:this.rows},(_,r)=>Array.from({length:this.cols},(_,c)=>this.data[r][c]*b.data[r][c]))); }
+  transpose(){ return new Matrix(Array.from({length:this.cols},(_,r)=>Array.from({length:this.rows},(_,c)=>this.data[c][r]))); }
+  map(fn){ return new Matrix(Array.from({length:this.rows},(_,r)=>Array.from({length:this.cols},(_,c)=>fn(this.data[r][c],r,c)))); }
+
+  determinant() {
+    if(!this.isSquare()) throw new Error('Determinant requires square matrix');
+    const n=this.rows; if(n===1) return this.data[0][0];
+    if(n===2) return this.data[0][0]*this.data[1][1]-this.data[0][1]*this.data[1][0];
+    let det=0;
+    for(let c=0;c<n;c++){const minor=this._cofactor(0,c);det+=(c%2===0?1:-1)*this.data[0][c]*minor.determinant();}
+    return Math.round(det*1000)/1000;
+  }
+  _cofactor(sr,sc){ const d=[];for(let r=0;r<this.rows;r++){if(r===sr)continue;const row=[];for(let c=0;c<this.cols;c++){if(c===sc)continue;row.push(this.data[r][c]);}d.push(row);}return new Matrix(d);}
+
+  inverse() {
+    if(!this.isSquare()) throw new Error('Inverse requires square matrix');
+    const n=this.rows;
+    const aug=this.data.map((row,i)=>[...row,...Array.from({length:n},(_,j)=>i===j?1:0)]);
+    for(let i=0;i<n;i++){
+      let mx=i;for(let r=i+1;r<n;r++) if(Math.abs(aug[r][i])>Math.abs(aug[mx][i])) mx=r;
+      [aug[i],aug[mx]]=[aug[mx],aug[i]];
+      const p=aug[i][i];if(Math.abs(p)<1e-12) throw new Error('Matrix is singular');
+      for(let c=0;c<2*n;c++) aug[i][c]/=p;
+      for(let r=0;r<n;r++){if(r===i)continue;const f=aug[r][i];for(let c=0;c<2*n;c++) aug[r][c]-=f*aug[i][c];}
+    }
+    return new Matrix(aug.map(row=>row.slice(n).map(v=>Math.round(v*10000)/10000)));
+  }
+
+  rref() {
+    const d=this.data.map(r=>[...r]);const m=this.rows,n=this.cols;let lead=0;
+    for(let r=0;r<m&&lead<n;r++){
+      let i=r;while(Math.abs(d[i][lead])<1e-12){i++;if(i===m){i=r;lead++;if(lead===n)return new Matrix(d);}}
+      [d[i],d[r]]=[d[r],d[i]];const div=d[r][lead];for(let c=0;c<n;c++) d[r][c]/=div;
+      for(let j=0;j<m;j++){if(j===r)continue;const f=d[j][lead];for(let c=0;c<n;c++) d[j][c]-=f*d[r][c];}
+      lead++;
+    }
+    return new Matrix(d.map(row=>row.map(v=>Math.round(v*10000)/10000)));
+  }
+
+  rank(){ const red=this.rref();let r=0;for(let i=0;i<red.rows;i++) if(red.data[i].some(v=>Math.abs(v)>1e-10)) r++; return r; }
+  power(exp){ if(!this.isSquare()) throw new Error('Power requires square matrix');if(exp===0) return Matrix.identity(this.rows);let r=this.clone();for(let i=1;i<exp;i++) r=r.multiply(this);return r; }
+  clone(){ return new Matrix(this.data.map(r=>[...r]), this.name); }
+  equals(o,eps=1e-10){ if(this.rows!==o.rows||this.cols!==o.cols) return false;for(let r=0;r<this.rows;r++) for(let c=0;c<this.cols;c++) if(Math.abs(this.data[r][c]-o.data[r][c])>eps) return false;return true; }
+}
+
+// ─── HTML Rendering Engine ───────────────────────────────────────────────────
+
+function fmtNum(v, width) {
+  if (Number.isInteger(v) && Math.abs(v) < 10000) return String(v).padStart(width);
+  if (Math.abs(v) >= 1e6 || (Math.abs(v) < 0.01 && v !== 0)) return v.toExponential(1).padStart(width);
+  const s = v.toFixed(2);
+  return s.length > width ? v.toFixed(1).padStart(width) : s.padStart(width);
+}
+
+function cellWidth(m) {
+  let mx = 1;
+  for (let r=0;r<m.rows;r++) for (let c=0;c<m.cols;c++) { const l=fmtNum(m.data[r][c],1).trim().length; if(l>mx) mx=l; }
+  return Math.min(mx + 2, 10);
+}
+
+function renderCellHTML(value, minVal, maxVal, width) {
+  const range = maxVal - minVal || 1;
+  const t = (value - minVal) / range;
+  const bgC = cmapLerp(t);
+  const fgC = contrastFg(bgC);
+  const text = esc(fmtNum(value, width));
+  return `<span class="cell" style="background:${rgbStyle(bgC)};color:${rgbStyle(fgC)};width:${width}ch">${text}</span>`;
+}
+
+function renderMatrixHTML(m, viewport, zoom, label) {
+  zoom = zoom || 1;
+  const vp = viewport || { rowStart:0, colStart:0, rowEnd:m.rows-1, colEnd:m.cols-1 };
+  const sRows = [], sCols = [];
+  for (let r=vp.rowStart;r<=Math.min(vp.rowEnd,m.rows-1);r+=zoom) sRows.push(r);
+  for (let c=vp.colStart;c<=Math.min(vp.colEnd,m.cols-1);c+=zoom) sCols.push(c);
+  const sub = new Matrix(sRows.map(r=>sCols.map(c=>m.data[r][c])));
+  const minV=sub.min(), maxV=sub.max(), w=cellWidth(sub);
+  let html = '';
+  const lbl = label || m.name || '';
+  if (lbl) html += `<span class="bold label-color"> ${esc(lbl)}</span>  <span class="dim">(${m.rows}×${m.cols})</span>\n`;
+  else html += `<span class="dim">(${m.rows}×${m.cols})</span>\n`;
+
+  if (sub.cols <= 40) {
+    let hdr = '     ';
+    for (const c of sCols) hdr += `<span class="dim cell" style="width:${w}ch">${String(c).padStart(w)}</span>`;
+    html += hdr + '\n';
+  }
+
+  for (let ri=0;ri<sub.rows;ri++) {
+    const rowIdx = sRows[ri];
+    const lb = ri===0?'⎡':ri===sub.rows-1?'⎣':'⎢';
+    const rb = ri===0?'⎤':ri===sub.rows-1?'⎦':'⎥';
+    let row = `<span class="dim">${String(rowIdx).padStart(3)}</span> <span class="bracket">${lb}</span>`;
+    for (let ci=0;ci<sub.cols;ci++) row += renderCellHTML(sub.data[ri][ci], minV, maxV, w);
+    row += `<span class="bracket">${rb}</span>`;
+    html += row + '\n';
+  }
+  if (zoom > 1) html += `<span class="dim">  zoom: 1:${zoom}  showing ${sub.rows}×${sub.cols} of ${m.rows}×${m.cols}</span>\n`;
+  return html;
+}
+
+function renderColorbarHTML(minV, maxV, width) {
+  width = width || 40;
+  let html = `<span class="dim">  ${fmtNum(minV,6).trim()} </span>`;
+  for (let i=0;i<width;i++) { const c=cmapLerp(i/(width-1)); html+=`<span style="background:${rgbStyle(c)}"> </span>`; }
+  html += `<span class="dim"> ${fmtNum(maxV,6).trim()}</span>`;
+  return html;
+}
+
+function renderTinyPictureHTML(m, label) {
+  const minV=m.min(),maxV=m.max(),range=maxV-minV||1;
+  let html='';
+  if(label) html+=`<span class="bold label-color"> ${esc(label)}</span>\n`;
+  for(let r=0;r<m.rows;r+=2){
+    let line=' ';
+    for(let c=0;c<m.cols;c++){
+      const t1=(m.data[r][c]-minV)/range;
+      const top=cmapLerp(t1);
+      if(r+1<m.rows){
+        const t2=(m.data[r+1][c]-minV)/range;
+        const bot=cmapLerp(t2);
+        line+=`<span style="color:${rgbStyle(top)};background:${rgbStyle(bot)}">▀</span>`;
+      } else {
+        line+=`<span style="color:${rgbStyle(top)}">▀</span>`;
+      }
+    }
+    html+=line+'\n';
+  }
+  html+=`<span class="dim"> (${m.rows}×${m.cols})</span>\n`;
+  return html;
+}
+
+function renderConstellationHTML(matrices, operators, resultName) {
+  const blocks = matrices.map(m => renderMatrixHTML(m).split('\n'));
+  const maxH = Math.max(...blocks.map(b=>b.length));
+  for (const b of blocks) while(b.length<maxH) b.push('');
+
+  // Measure visible widths
+  function visLen(s) { return s.replace(/<[^>]*>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').length; }
+  const widths = blocks.map(b=>Math.max(...b.map(l=>visLen(l))));
+  const opRow = Math.floor(maxH/2);
+  let html='';
+  for(let row=0;row<maxH;row++){
+    let line='';
+    for(let b=0;b<blocks.length;b++){
+      const text=blocks[b][row]||'';
+      const pad=widths[b]-visLen(text);
+      line+=text+' '.repeat(Math.max(0,pad));
+      if(b<operators.length){
+        if(row===opRow) line+=`  <span class="bold accent"> ${esc(operators[b])} </span>  `;
+        else line+='       ';
+      }
+    }
+    html+=line+'\n';
+  }
+  if(resultName) html+=`<span class="dim">  → result stored as "${esc(resultName)}"</span>\n`;
+  return html;
+}
+
+// ─── Interactive Terminal ────────────────────────────────────────────────────
+
+const workspace = new Map();
+let inputResolve = null;
+let currentPrompt = '  choice> ';
+
+function setPrompt(p) {
+  currentPrompt = p;
+  promptEl.textContent = p;
+}
+
+function ask(prompt) {
+  setPrompt(prompt);
+  inputEl.value = '';
+  inputEl.focus();
+  return new Promise(resolve => { inputResolve = resolve; });
+}
+
+function askNumber(prompt, defaultVal) {
+  return ask(prompt).then(s => {
+    if (s==='' && defaultVal !== undefined) return defaultVal;
+    const n = Number(s);
+    if (isNaN(n)) { writeln(`  <span class="error">Invalid number, try again</span>`); return askNumber(prompt, defaultVal); }
+    return n;
+  });
+}
+
+function askName(prompt) {
+  return ask(prompt).then(s => {
+    if (!s) { writeln(`  <span class="error">Name required</span>`); return askName(prompt); }
+    return s;
+  });
+}
+
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const val = inputEl.value.trim();
+    writeln(`<span class="dim">${esc(currentPrompt)}</span>${esc(val)}`);
+    inputEl.value = '';
+    if (inputResolve) { const r = inputResolve; inputResolve = null; r(val); }
+  }
+});
+
+// Keep focus
+document.addEventListener('click', () => inputEl.focus());
+
+function listMatrices() {
+  if (workspace.size === 0) { writeln(`  <span class="dim">(workspace empty — create some matrices first)</span>`); return; }
+  writeln(`\n<span class="bold">  Workspace:</span>`);
+  for (const [name, m] of workspace) {
+    const kind = m.isScalar()?'scalar':m.isVector()?'vector':'matrix';
+    writeln(`    <span class="success">${esc(name)}</span>  <span class="dim">${m.rows}×${m.cols} ${kind}</span>`);
+  }
+  writeln('');
+}
+
+async function pickMatrix(prompt) {
+  listMatrices();
+  if (workspace.size === 0) return null;
+  const name = await ask(prompt);
+  const m = workspace.get(name);
+  if (!m) { writeln(`  <span class="error">Matrix "${esc(name)}" not found</span>`); return null; }
+  return m;
+}
+
+// ─── Menus ───────────────────────────────────────────────────────────────────
+
+function printTitle() {
+  writeln(`
+<span class="bold title-color">╔══════════════════════════════════════════════════════════╗
+║               T E A C H   M A T R I C E S              ║
+║         Interactive Matrix Laboratory  v1.0             ║
+╚══════════════════════════════════════════════════════════╝</span>
+<span class="dim">  Scalars · Vectors · Matrices · up to 256×256</span>
+<span class="dim">  Color-coded cells · Scientific notation · Zoom</span>
+`);
+}
+
+function printMenu() {
+  const count = workspace.size;
+  writeln(`
+<span class="bold label-color">  ── Main Menu ──</span>   <span class="dim">[${count} matrices in workspace]</span>
+
+  <span class="menu-key">[1]</span> Create matrix       <span class="menu-key">[6]</span> Zoom / Viewport
+  <span class="menu-key">[2]</span> View matrix         <span class="menu-key">[7]</span> Tiny picture mode
+  <span class="menu-key">[3]</span> Operations          <span class="menu-key">[8]</span> Constellation view
+  <span class="menu-key">[4]</span> Properties          <span class="menu-key">[9]</span> Gallery
+  <span class="menu-key">[5]</span> List workspace      <span class="menu-key">[0]</span> Learn / Tutorial
+  <span class="quit-key">[q]</span> Quit
+`);
+}
+
+// ── Create Menu ──
+async function createMenu() {
+  writeln(`
+<span class="bold label-color">  ── Create Matrix ──</span>
+
+  <span class="menu-key">[1]</span> Zeros            <span class="menu-key">[5]</span> Custom (enter values)
+  <span class="menu-key">[2]</span> Ones             <span class="menu-key">[6]</span> Random
+  <span class="menu-key">[3]</span> Identity         <span class="menu-key">[7]</span> Scalar (1×1)
+  <span class="menu-key">[4]</span> Vector           <span class="menu-key">[8]</span> Large random (up to 256×256)
+  <span class="menu-key">[b]</span> Back
+`);
+  const choice = await ask('  choice> ');
+  if (choice==='b') return;
+  const name = await askName('  name> ');
+
+  if (choice==='1') {
+    const rows=await askNumber('  rows> '),cols=await askNumber('  cols> ');
+    workspace.set(name, Matrix.zeros(rows,cols,name));
+  } else if (choice==='2') {
+    const rows=await askNumber('  rows> '),cols=await askNumber('  cols> ');
+    workspace.set(name, Matrix.ones(rows,cols,name));
+  } else if (choice==='3') {
+    const n=await askNumber('  size (n×n)> ');
+    workspace.set(name, Matrix.identity(n,name));
+  } else if (choice==='4') {
+    const input=await ask('  values (space-separated)> ');
+    const vals=input.split(/[\s,]+/).map(Number).filter(v=>!isNaN(v));
+    if(!vals.length){writeln(`  <span class="error">No valid numbers</span>`);return;}
+    const dir=await ask('  column vector (c) or row vector (r)? [c]> ');
+    workspace.set(name, dir==='r'?Matrix.rowVector(vals,name):Matrix.vector(vals,name));
+  } else if (choice==='5') {
+    const rows=await askNumber('  rows> '),cols=await askNumber('  cols> ');
+    writeln(`  Enter ${rows} rows with ${cols} values each (space-separated):`);
+    const data=[];
+    for(let r=0;r<rows;r++){
+      const line=await ask(`  row ${r}> `);
+      const vals=line.split(/[\s,]+/).map(Number);
+      if(vals.length!==cols||vals.some(isNaN)){writeln(`  <span class="error">Expected ${cols} numbers. Row filled with 0.</span>`);data.push(new Array(cols).fill(0));}
+      else data.push(vals);
+    }
+    workspace.set(name, new Matrix(data , name));
+  } else if (choice==='6') {
+    const rows=await askNumber('  rows> '),cols=await askNumber('  cols> ');
+    const minV=await askNumber('  min value [0]> ',0),maxV=await askNumber('  max value [9]> ',9);
+    const ints=(await ask('  integers? (y/n) [y]> '))!=='n';
+    workspace.set(name, Matrix.random(rows,cols,minV,maxV,ints,name));
+  } else if (choice==='7') {
+    const val=await askNumber('  value> ');
+    workspace.set(name, Matrix.scalar(val,name));
+  } else if (choice==='8') {
+    const rows=Math.min(256,Math.max(1,await askNumber('  rows (up to 256)> ')));
+    const cols=Math.min(256,Math.max(1,await askNumber('  cols (up to 256)> ')));
+    const minV=await askNumber('  min value [0]> ',0),maxV=await askNumber('  max value [255]> ',255);
+    workspace.set(name, Matrix.random(rows,cols,minV,maxV,true,name));
+    writeln(`  <span class="success">Created ${rows}×${cols} matrix "${esc(name)}"</span>`);
+  } else { writeln(`  <span class="error">Invalid choice</span>`); return; }
+
+  const m=workspace.get(name);
+  if(m){
+    if(m.rows<=20&&m.cols<=20) writeln('\n'+renderMatrixHTML(m,null,1,name));
+    else writeln(`\n  <span class="success">Created "${esc(name)}" (${m.rows}×${m.cols}). Use View or Zoom to see it.</span>`);
+  }
+}
+
+// ── View ──
+async function viewMenu() {
+  const m=await pickMatrix('  view which matrix> ');
+  if(!m) return;
+  if(m.rows<=30&&m.cols<=30) writeln('\n'+renderMatrixHTML(m,null,1,m.name));
+  else { const z=Math.max(1,Math.ceil(Math.max(m.rows,m.cols)/30)); writeln('\n'+renderMatrixHTML(m,null,z,m.name)); }
+  writeln(renderColorbarHTML(m.min(),m.max()));
+  writeln('');
+}
+
+// ── Operations ──
+async function operationsMenu() {
+  writeln(`
+<span class="bold label-color">  ── Operations ──</span>
+
+  <span class="menu-key">[1]</span> A + B  (add)               <span class="menu-key">[7]</span>  Aᵀ (transpose)
+  <span class="menu-key">[2]</span> A − B  (subtract)          <span class="menu-key">[8]</span>  det(A) (determinant)
+  <span class="menu-key">[3]</span> A × B  (multiply)          <span class="menu-key">[9]</span>  A⁻¹ (inverse)
+  <span class="menu-key">[4]</span> k × A  (scalar multiply)   <span class="menu-key">[10]</span> RREF (row echelon)
+  <span class="menu-key">[5]</span> A ∘ B  (Hadamard)          <span class="menu-key">[11]</span> Aⁿ (power)
+  <span class="menu-key">[6]</span> A map f (element-wise fn)  <span class="menu-key">[b]</span>  Back
+`);
+  const choice=await ask('  choice> ');
+  if(choice==='b') return;
+  try {
+    if(['1','2','3','5'].includes(choice)){
+      const a=await pickMatrix('  matrix A> ');if(!a)return;
+      const b=await pickMatrix('  matrix B> ');if(!b)return;
+      let result,op;
+      if(choice==='1'){result=a.add(b);op='+';}
+      else if(choice==='2'){result=a.subtract(b);op='−';}
+      else if(choice==='3'){result=a.multiply(b);op='×';}
+      else {result=a.hadamard(b);op='∘';}
+      const rn=await askName('  store result as> ');result.name=rn;workspace.set(rn,result);
+      if(a.rows<=10&&a.cols<=10) writeln('\n'+renderConstellationHTML([a,b,result],[op,'='],rn));
+      else writeln('\n'+renderMatrixHTML(result,null,1,rn));
+    } else if(choice==='4'){
+      const a=await pickMatrix('  matrix A> ');if(!a)return;
+      const k=await askNumber('  scalar k> ');
+      const result=a.scalarMultiply(k);
+      const rn=await askName('  store result as> ');result.name=rn;workspace.set(rn,result);
+      writeln('\n'+renderConstellationHTML([Matrix.scalar(k),a,result],['×','='],rn));
+    } else if(choice==='6'){
+      const a=await pickMatrix('  matrix A> ');if(!a)return;
+      writeln(`  Available functions: abs, sqrt, square, negate, sin, cos, floor, ceil, round`);
+      const fname=await ask('  function> ');
+      const fns={abs:Math.abs,sqrt:v=>Math.sqrt(Math.abs(v)),square:v=>v*v,negate:v=>-v,sin:Math.sin,cos:Math.cos,floor:Math.floor,ceil:Math.ceil,round:Math.round};
+      const fn=fns[fname];if(!fn){writeln(`  <span class="error">Unknown function</span>`);return;}
+      const result=a.map(v=>Math.round(fn(v)*1000)/1000);
+      const rn=await askName('  store result as> ');result.name=rn;workspace.set(rn,result);
+      writeln('\n'+renderMatrixHTML(result,null,1,rn));
+    } else if(choice==='7'){
+      const a=await pickMatrix('  matrix A> ');if(!a)return;
+      const result=a.transpose();
+      const rn=await askName('  store result as> ');result.name=rn;workspace.set(rn,result);
+      writeln('\n'+renderConstellationHTML([a,result],['ᵀ→'],rn));
+    } else if(choice==='8'){
+      const a=await pickMatrix('  matrix A> ');if(!a)return;
+      const det=a.determinant();
+      writeln(`\n  <span class="bold">det(${esc(a.name)}) = <span class="accent">${det}</span></span>\n`);
+    } else if(choice==='9'){
+      const a=await pickMatrix('  matrix A> ');if(!a)return;
+      const result=a.inverse();
+      const rn=await askName('  store result as> ');result.name=rn;workspace.set(rn,result);
+      const check=a.multiply(result);
+      writeln('\n'+renderConstellationHTML([a,result,check],['⁻¹→','verify: A×A⁻¹='],rn));
+    } else if(choice==='10'){
+      const a=await pickMatrix('  matrix A> ');if(!a)return;
+      const result=a.rref();
+      const rn=await askName('  store result as> ');result.name=rn;workspace.set(rn,result);
+      writeln('\n'+renderConstellationHTML([a,result],['RREF→'],rn));
+    } else if(choice==='11'){
+      const a=await pickMatrix('  matrix A> ');if(!a)return;
+      const n=await askNumber('  exponent> ');
+      const result=a.power(n);
+      const rn=await askName('  store result as> ');result.name=rn;workspace.set(rn,result);
+      writeln('\n'+renderMatrixHTML(result,null,1,rn));
+    } else { writeln(`  <span class="error">Invalid choice</span>`); }
+  } catch(err) { writeln(`  <span class="error">Error: ${esc(err.message)}</span>`); }
+}
+
+// ── Properties ──
+async function propertiesMenu() {
+  const m=await pickMatrix('  matrix> ');if(!m) return;
+  writeln(`\n<span class="bold">  Properties of "${esc(m.name)}":</span>`);
+  writeln(`    Size:       ${m.rows}×${m.cols}`);
+  writeln(`    Type:       ${m.isScalar()?'scalar':m.isVector()?'vector':'matrix'}`);
+  writeln(`    Square:     ${m.isSquare()?'yes':'no'}`);
+  writeln(`    Min value:  ${m.min()}`);
+  writeln(`    Max value:  ${m.max()}`);
+  writeln(`    Norm (F):   ${Math.round(m.norm()*1000)/1000}`);
+  writeln(`    Rank:       ${m.rank()}`);
+  if(m.isSquare()){
+    writeln(`    Trace:      ${m.trace()}`);
+    if(m.rows<=10){try{writeln(`    Determinant: ${m.determinant()}`);}catch(e){writeln(`    Determinant: (error)`);}}
+    else writeln(`    Determinant: (matrix too large for recursive computation)`);
+  }
+  writeln('');
+}
+
+// ── Zoom / Viewport ──
+async function zoomMenu() {
+  const m=await pickMatrix('  matrix> ');if(!m) return;
+  let rowStart=0,colStart=0;
+  let zoom=Math.max(1,Math.ceil(Math.max(m.rows,m.cols)/30));
+  const viewRows=Math.min(30,m.rows),viewCols=Math.min(30,m.cols);
+
+  function redraw(){
+    const vp={rowStart,colStart,rowEnd:Math.min(rowStart+viewRows*zoom-1,m.rows-1),colEnd:Math.min(colStart+viewCols*zoom-1,m.cols-1)};
+    writeln('\n'+renderMatrixHTML(m,vp,zoom,m.name));
+    writeln(renderColorbarHTML(m.min(),m.max()));
+    writeln(`<span class="dim">  viewport: rows ${rowStart}..${vp.rowEnd}  cols ${colStart}..${vp.colEnd}  zoom 1:${zoom}</span>`);
+    writeln(`<span class="dim">  [w/s] scroll ↑↓  [a/d] scroll ←→  [+/-] zoom  [q] back</span>\n`);
+  }
+  redraw();
+
+  while(true){
+    const cmd=await ask('  navigate> ');
+    if(cmd==='q'||cmd==='b') break;
+    const step=zoom*5;
+    if(cmd==='w') rowStart=Math.max(0,rowStart-step);
+    else if(cmd==='s') rowStart=Math.min(m.rows-1,rowStart+step);
+    else if(cmd==='a') colStart=Math.max(0,colStart-step);
+    else if(cmd==='d') colStart=Math.min(m.cols-1,colStart+step);
+    else if(cmd==='+'||cmd==='=') zoom=Math.max(1,zoom-1);
+    else if(cmd==='-') zoom=Math.min(Math.max(m.rows,m.cols),zoom+1);
+    else continue;
+    redraw();
+  }
+}
+
+// ── Tiny Picture Mode ──
+async function tinyPictureMenu() {
+  writeln(`
+<span class="bold label-color">  ── Tiny Picture Mode ──</span>
+
+  <span class="menu-key">[1]</span> View existing matrix as picture
+  <span class="menu-key">[2]</span> Generate pattern picture
+  <span class="menu-key">[b]</span> Back
+`);
+  const choice=await ask('  choice> ');
+  if(choice==='b') return;
+  if(choice==='1'){
+    const m=await pickMatrix('  matrix> ');if(!m)return;
+    writeln('\n'+renderTinyPictureHTML(m,m.name));
+  } else if(choice==='2'){
+    writeln(`  Patterns: checker, gradient-h, gradient-v, circle, cross, diagonal, wave, spiral, noise`);
+    const pattern=await ask('  pattern> ');
+    const size=Math.min(256,Math.max(4,await askNumber('  size (8-256) [32]> ',32)));
+    const name=await askName('  name> ');
+    const m=Matrix.tinyPicture(size,pattern,name);workspace.set(name,m);
+    writeln('\n'+renderTinyPictureHTML(m,name));
+  }
+}
+
+// ── Constellation View ──
+async function constellationMenu() {
+  writeln(`\n<span class="bold label-color">  ── Constellation View ──</span>`);
+  writeln(`  <span class="dim">Display multiple matrices side by side</span>\n`);
+  listMatrices(); if(workspace.size===0) return;
+  const input=await ask('  matrix names (space-separated)> ');
+  const names=input.split(/\s+/).filter(n=>n.length>0);
+  const matrices=[];
+  for(const n of names){const m=workspace.get(n);if(!m) writeln(`  <span class="error">Skipping "${esc(n)}"</span>`);else matrices.push(m);}
+  if(!matrices.length) return;
+  const operators=new Array(matrices.length-1).fill('·');
+  writeln('\n'+renderConstellationHTML(matrices,operators));
+}
+
+// ── Gallery ──
+async function galleryMenu() {
+  writeln(`
+<span class="bold label-color">  ── Gallery ──</span>
+<span class="dim">  Pre-built interesting matrices</span>
+
+  <span class="menu-key">[1]</span> Rotation matrix (2D)
+  <span class="menu-key">[2]</span> Fibonacci matrix
+  <span class="menu-key">[3]</span> Hilbert matrix
+  <span class="menu-key">[4]</span> Magic square (3×3)
+  <span class="menu-key">[5]</span> Hadamard matrix (4×4)
+  <span class="menu-key">[6]</span> Pascal matrix
+  <span class="menu-key">[7]</span> DFT matrix (4×4 magnitudes)
+  <span class="menu-key">[8]</span> All gallery items
+  <span class="menu-key">[b]</span> Back
+`);
+  const choice=await ask('  choice> ');if(choice==='b') return;
+
+  const gallery={};
+  const angle=choice==='1'?await askNumber('  angle (degrees)> ',45):45;
+  const rad=angle*Math.PI/180;
+  gallery['Rot2D']=new Matrix([[Math.round(Math.cos(rad)*10000)/10000,Math.round(-Math.sin(rad)*10000)/10000],[Math.round(Math.sin(rad)*10000)/10000,Math.round(Math.cos(rad)*10000)/10000]],'Rot2D');
+  gallery['Fibonacci']=new Matrix([[1,1],[1,0]],'Fibonacci');
+  const hilN=5;gallery['Hilbert']=new Matrix(Array.from({length:hilN},(_,i)=>Array.from({length:hilN},(_,j)=>Math.round(1/(i+j+1)*10000)/10000)),'Hilbert');
+  gallery['Magic3']=new Matrix([[2,7,6],[9,5,1],[4,3,8]],'Magic3');
+  gallery['Hadamard4']=new Matrix([[1,1,1,1],[1,-1,1,-1],[1,1,-1,-1],[1,-1,-1,1]],'Hadamard4');
+  const pasN=5;const pasD=Array.from({length:pasN},()=>new Array(pasN).fill(0));
+  for(let i=0;i<pasN;i++){pasD[i][0]=1;pasD[0][i]=1;}for(let i=1;i<pasN;i++)for(let j=1;j<pasN;j++)pasD[i][j]=pasD[i-1][j]+pasD[i][j-1];
+  gallery['Pascal']=new Matrix(pasD,'Pascal');
+  const dftN=4;gallery['DFT4']=new Matrix(Array.from({length:dftN},(_,k)=>Array.from({length:dftN},(_,n)=>Math.round(Math.cos(2*Math.PI*k*n/dftN)*1000)/1000)),'DFT4');
+
+  if(choice==='8'){
+    for(const[name,m] of Object.entries(gallery)){workspace.set(name,m);writeln('\n'+renderMatrixHTML(m,null,1,name));}
+  } else if(choice>='1'&&choice<='7'){
+    const items=Object.entries(gallery);const idx=Number(choice)-1;
+    if(idx<items.length){const[name,m]=items[idx];workspace.set(name,m);writeln('\n'+renderMatrixHTML(m,null,1,name));writeln(renderColorbarHTML(m.min(),m.max()));}
+  } else { writeln(`  <span class="error">Invalid choice</span>`); }
+  writeln('');
+}
+
+// ── Learn / Tutorial ──
+async function learnMenu() {
+  writeln(`
+<span class="bold label-color">  ── Learn ──</span>
+
+  <span class="menu-key">[1]</span> What is a matrix?
+  <span class="menu-key">[2]</span> Scalars, vectors, and matrices
+  <span class="menu-key">[3]</span> Matrix addition
+  <span class="menu-key">[4]</span> Matrix multiplication
+  <span class="menu-key">[5]</span> Transpose
+  <span class="menu-key">[6]</span> Determinant
+  <span class="menu-key">[7]</span> Inverse
+  <span class="menu-key">[8]</span> Identity matrix
+  <span class="menu-key">[9]</span> Interactive demo — multiply step by step
+  <span class="menu-key">[b]</span> Back
+`);
+  const choice=await ask('  choice> ');if(choice==='b') return;
+
+  if(choice==='1'){
+    writeln(`\n<span class="bold">  What is a Matrix?</span>\n\n  A matrix is a rectangular grid of numbers arranged in rows and columns.\n\n  Example — a 3×3 matrix:`);
+    writeln('\n'+renderMatrixHTML(Matrix.random(3,3,1,9,true,'demo'),null,1,'A'));
+    writeln(`\n<span class="dim">  Each colored cell holds a number. The color tells you how big or\n  small the value is relative to other values in the matrix.\n\n  Rows go left ↔ right.  Columns go up ↕ down.\n  This matrix has 3 rows and 3 columns — we call it a "3 by 3" matrix.</span>\n`);
+  } else if(choice==='2'){
+    writeln(`\n<span class="bold">  Scalars, Vectors, and Matrices</span>\n\n  They are all the same thing — just different sizes!`);
+    writeln('\n'+renderConstellationHTML([Matrix.scalar(7),Matrix.vector([2,5,3]),Matrix.random(3,3,1,9,true,'M')],['  ','  ']));
+    writeln(`\n<span class="dim">  • A scalar is a 1×1 matrix — just one number.\n  • A vector is a matrix with only 1 column (or 1 row).\n  • A matrix is the general rectangular grid of numbers.\n\n  In this tool, all three are stored the same way!</span>\n`);
+  } else if(choice==='3'){
+    writeln(`\n<span class="bold">  Matrix Addition</span>\n\n  Add two matrices of the <span class="bold">same size</span> — add matching cells.`);
+    const a=new Matrix([[1,2],[3,4]],'A'),b=new Matrix([[5,6],[7,8]],'B'),c=a.add(b);c.name='A+B';
+    writeln('\n'+renderConstellationHTML([a,b,c],['+','=']));
+    writeln(`\n<span class="dim">  Each cell: result[r][c] = A[r][c] + B[r][c]\n  For example: 1 + 5 = 6,  2 + 6 = 8,  3 + 7 = 10,  4 + 8 = 12</span>\n`);
+  } else if(choice==='4'){
+    writeln(`\n<span class="bold">  Matrix Multiplication</span>\n\n  To multiply A(m×n) × B(n×p), the inner dimensions must match!\n  Result is (m×p).  Each cell is a <span class="bold">dot product</span> of a row and column.`);
+    const a=new Matrix([[1,2,3],[4,5,6]],'A'),b=new Matrix([[7,8],[9,10],[11,12]],'B'),c=a.multiply(b);c.name='A×B';
+    writeln('\n'+renderConstellationHTML([a,b,c],['×','=']));
+    writeln(`\n<span class="dim">  result[0][0] = 1×7 + 2×9 + 3×11 = 7 + 18 + 33 = 58\n  result[0][1] = 1×8 + 2×10 + 3×12 = 8 + 20 + 36 = 64\n  ...and so on for each cell.</span>\n`);
+  } else if(choice==='5'){
+    writeln(`\n<span class="bold">  Transpose</span>\n\n  Flip the matrix over its diagonal — rows become columns.`);
+    const a=new Matrix([[1,2,3],[4,5,6]],'A'),t=a.transpose();t.name='Aᵀ';
+    writeln('\n'+renderConstellationHTML([a,t],['ᵀ→']));
+    writeln(`\n<span class="dim">  A is 2×3, its transpose Aᵀ is 3×2.\n  Row 0 of A becomes column 0 of Aᵀ, etc.</span>\n`);
+  } else if(choice==='6'){
+    writeln(`\n<span class="bold">  Determinant</span>\n\n  A single number that tells you about a square matrix.\n  If det = 0, the matrix is "singular" (no inverse exists).`);
+    const a=new Matrix([[3,1],[5,2]],'A');
+    writeln('\n'+renderMatrixHTML(a,null,1,'A'));
+    writeln(`\n<span class="dim">  For a 2×2 matrix [[a,b],[c,d]]:  det = a×d − b×c\n  det(A) = 3×2 − 1×5 = 6 − 5 = <span class="bold">1</span>\n\n  The determinant tells you the "scaling factor" of the transformation\n  the matrix represents.</span>\n`);
+  } else if(choice==='7'){
+    writeln(`\n<span class="bold">  Inverse</span>\n\n  The inverse A⁻¹ is the matrix such that A × A⁻¹ = I (identity).\n  Only square matrices with <span class="bold">non-zero determinant</span> have inverses.`);
+    const a=new Matrix([[4,7],[2,6]],'A'),inv=a.inverse();inv.name='A⁻¹';const id=a.multiply(inv);id.name='A×A⁻¹';
+    writeln('\n'+renderConstellationHTML([a,inv,id],['⁻¹→','verify:']));
+    writeln(`\n<span class="dim">  A × A⁻¹ gives the identity matrix (1s on diagonal, 0s elsewhere).\n  The inverse "undoes" what the matrix does.</span>\n`);
+  } else if(choice==='8'){
+    writeln(`\n<span class="bold">  Identity Matrix</span>\n\n  The identity matrix I has 1s on the diagonal and 0s everywhere else.\n  Any matrix times I equals itself: A × I = A.`);
+    const id=Matrix.identity(4,'I₄'),a=Matrix.random(4,4,1,9,true,'A'),result=a.multiply(id);result.name='A×I';
+    writeln('\n'+renderConstellationHTML([a,id,result],['×','=']));
+    writeln(`\n<span class="dim">  I is the matrix version of the number 1.\n  Multiplying by I changes nothing — it's the "do nothing" matrix.</span>\n`);
+  } else if(choice==='9'){
+    await interactiveMultiplyDemo();
+  }
+}
+
+async function interactiveMultiplyDemo() {
+  writeln(`\n<span class="bold">  Interactive Multiplication Demo</span>\n<span class="dim">  Watch how each cell of the result is computed step by step.</span>\n`);
+  const a=new Matrix([[1,2,3],[4,5,6]],'A'),b=new Matrix([[7,8],[9,10],[11,12]],'B');
+  writeln(renderConstellationHTML([a,b],['×']));writeln('');
+  const result=Matrix.zeros(a.rows,b.cols,'C');
+  for(let r=0;r<a.rows;r++){
+    for(let c=0;c<b.cols;c++){
+      let expl=`  C[${r}][${c}] = `;const terms=[];let sum=0;
+      for(let k=0;k<a.cols;k++){const prod=a.data[r][k]*b.data[k][c];sum+=prod;terms.push(`${a.data[r][k]}×${b.data[k][c]}`);}
+      expl+=terms.join(' + ')+` = <span class="bold accent">${sum}</span>`;
+      result.set(r,c,sum);
+      writeln(expl);
+      writeln(renderMatrixHTML(result,null,1,'C (building...)'));
+      writeln('');
+      await ask(`  <span class="dim">[press Enter to continue]</span> `);
+    }
+  }
+  result.name='C';workspace.set('C',result);
+  writeln(`  <span class="success">Final result stored as "C"</span>\n`);
+}
+
+// ─── Main Loop ───────────────────────────────────────────────────────────────
+
+async function main() {
+  clearOutput();
+  printTitle();
+
+  workspace.set('A', Matrix.random(3,3,0,9,true,'A'));
+  workspace.set('I3', Matrix.identity(3,'I3'));
+
+  while(true){
+    printMenu();
+    const choice=await ask('  choice> ');
+    if(choice==='q'||choice==='quit'||choice==='exit'){
+      writeln(`\n  <span class="title-color">Thanks for learning matrices! Goodbye.</span>\n`);
+      break;
+    }
+    if(choice==='1') await createMenu();
+    else if(choice==='2') await viewMenu();
+    else if(choice==='3') await operationsMenu();
+    else if(choice==='4') await propertiesMenu();
+    else if(choice==='5') listMatrices();
+    else if(choice==='6') await zoomMenu();
+    else if(choice==='7') await tinyPictureMenu();
+    else if(choice==='8') await constellationMenu();
+    else if(choice==='9') await galleryMenu();
+    else if(choice==='0') await learnMenu();
+    else writeln(`  <span class="error">Unknown option "${esc(choice)}"</span>`);
+  }
+}
+
+main();
+</script>
+</body>
+</html>
