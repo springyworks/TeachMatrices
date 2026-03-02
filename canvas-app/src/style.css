@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    KosmodTS — Global Styles
+   TypeScript Structure Explorer with maxGraph + Monaco
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
@@ -55,7 +56,7 @@ html, body {
   font-weight: 700;
   font-size: 15px;
   color: var(--accent);
-  margin-right: 12px;
+  margin-right: 8px;
   letter-spacing: 1px;
 }
 
@@ -80,9 +81,48 @@ html, body {
   flex: 1;
 }
 
+#toolbar .separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border-cell);
+  margin: 0 4px;
+}
+
 #toolbar .status {
   color: var(--text-secondary);
   font-size: 11px;
+}
+
+/* ─── Tab Bar ─────────────────────────────────────────────────────────────── */
+
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  margin-right: 8px;
+}
+
+.tab-bar .tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  padding: 4px 16px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.tab-bar .tab:hover {
+  color: var(--text-primary);
+  background: rgba(100, 200, 255, 0.05);
+}
+
+.tab-bar .tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: rgba(100, 255, 180, 0.08);
 }
 
 /* ─── Graph Container ─────────────────────────────────────────────────────── */
@@ -95,6 +135,16 @@ html, body {
     radial-gradient(circle at 50% 50%, #14142800 0%, var(--bg-primary) 100%),
     repeating-linear-gradient(0deg, transparent, transparent 19px, #1a1a2e22 19px, #1a1a2e22 20px),
     repeating-linear-gradient(90deg, transparent, transparent 19px, #1a1a2e22 19px, #1a1a2e22 20px);
+}
+
+/* ─── Source Editor View ──────────────────────────────────────────────────── */
+
+#source-view {
+  background: var(--bg-primary);
+}
+
+#source-editor {
+  border-top: 1px solid var(--border-cell);
 }
 
 /* ─── Cell Overlay (positioned absolutely over the SVG graph) ─────────────── */
@@ -135,6 +185,9 @@ html, body {
   flex: 1;
   color: var(--accent-alt);
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .code-cell .cell-header .cell-type-badge {
@@ -144,14 +197,11 @@ html, body {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
-.code-cell .cell-header .cell-type-badge.class {
-  color: #c0a0ff;
-}
-
-.code-cell .cell-header .cell-type-badge.instance {
-  color: #80d0ff;
+.code-cell .cell-header .export-badge {
+  background: rgba(100, 255, 180, 0.15);
 }
 
 .code-cell .cell-header button {
@@ -204,42 +254,285 @@ html, body {
   color: var(--accent);
 }
 
-/* ─── Matrix Visualization ────────────────────────────────────────────────── */
-
-.matrix-grid {
-  display: inline-grid;
-  gap: 1px;
-  background: #0a0a14;
-  padding: 2px;
-  border-radius: 3px;
+.code-cell .result-panel .result-content.info {
+  color: var(--text-secondary);
+  font-size: 11px;
 }
 
-.matrix-grid .matrix-cell {
-  width: 28px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 600;
-  border-radius: 2px;
-}
+/* ─── Edge Legend Panel ───────────────────────────────────────────────────── */
 
-/* ─── SysML Edge Labels ──────────────────────────────────────────────────── */
-
-.edge-label {
+.legend-panel {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
   background: var(--bg-secondary);
-  padding: 1px 5px;
-  border-radius: 3px;
+  border: 1px solid var(--border-cell);
+  border-radius: 6px;
+  padding: 8px 12px;
   font-size: 10px;
   color: var(--text-secondary);
-  border: 1px solid var(--border-cell);
+  z-index: 50;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.legend-panel:hover {
+  opacity: 1;
+}
+
+.legend-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 20px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.legend-line.dashed {
+  background: none !important;
+  border-top: 2px dashed currentColor;
+  height: 0;
 }
 
 /* ─── maxGraph overrides ──────────────────────────────────────────────────── */
 
 svg text {
   font-family: var(--font-mono) !important;
+}
+
+/* maxGraph resize handles (sizer squares) — style them to match dark theme */
+.mxCellEditor {
+  background: transparent !important;
+}
+
+/* ─── Float Button Styling ────────────────────────────────────────────────── */
+
+#toolbar .btn-float {
+  background: linear-gradient(135deg, #1a2040 0%, #1a1a2e 100%);
+  border: 1px solid #3a3a6a;
+  color: var(--accent-alt);
+  transition: all 0.25s ease;
+}
+
+#toolbar .btn-float:hover {
+  background: linear-gradient(135deg, #252560 0%, #1e1e40 100%);
+  border-color: var(--accent-alt);
+  box-shadow: 0 0 12px rgba(100, 200, 255, 0.25);
+}
+
+#toolbar .btn-float.active {
+  background: linear-gradient(135deg, #1a3040 0%, #0e2030 100%);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 16px rgba(100, 255, 180, 0.3);
+  animation: float-pulse 2s ease-in-out infinite;
+}
+
+@keyframes float-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(100, 255, 180, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(100, 255, 180, 0.45); }
+}
+
+/* ─── Height Toggle Button ────────────────────────────────────────────────── */
+
+.code-cell .cell-header .height-toggle-btn {
+  font-size: 10px;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.code-cell .cell-header .height-toggle-btn:hover {
+  opacity: 1;
+  color: var(--accent-alt);
+}
+
+/* ─── Cell Overlay transition for smooth resize ───────────────────────────── */
+
+.cell-overlay {
+  transition: width 0.05s, height 0.05s;
+}
+
+/* ─── Resize Handles ──────────────────────────────────────────────────────── */
+
+.resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #00FF00;
+  border: 1px solid #000;
+  border-radius: 1px;
+  z-index: 30;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.1s, box-shadow 0.1s;
+  pointer-events: all;
+}
+
+.cell-overlay:hover .resize-handle,
+.cell-overlay.selected .resize-handle {
+  opacity: 1;
+}
+
+.resize-handle:hover {
+  background: #44ff44;
+  box-shadow: 0 0 6px rgba(0, 255, 0, 0.6);
+}
+
+.resize-handle:active {
+  background: #00cc00;
+  border-color: #00cc00;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+}
+
+/* Positions for each handle */
+.resize-nw { top: -4px;  left: -4px; }
+.resize-n  { top: -4px;  left: 50%;  transform: translateX(-50%); }
+.resize-ne { top: -4px;  right: -4px; }
+.resize-w  { top: 50%;   left: -4px;  transform: translateY(-50%); }
+.resize-e  { top: 50%;   right: -4px; transform: translateY(-50%); }
+.resize-sw { bottom: -4px; left: -4px; }
+.resize-s  { bottom: -4px; left: 50%; transform: translateX(-50%); }
+.resize-se { bottom: -4px; right: -4px; }
+
+/* ─── Selection Highlight ─────────────────────────────────────────────────── */
+
+.cell-overlay.selected {
+  box-shadow:
+    0 0 0 2px #00FF00,
+    0 0 14px rgba(0, 255, 0, 0.25),
+    0 2px 12px rgba(0, 0, 0, 0.5) !important;
+  z-index: 15;
+}
+
+.cell-overlay.selected .code-cell {
+  border: 1px solid #00cc00;
+}
+
+/* Don't override debug-active highlight */
+.cell-overlay.debug-active.selected {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 20px rgba(100, 255, 180, 0.35),
+    0 0 40px rgba(100, 255, 180, 0.15) !important;
+}
+
+/* ─── Rubberband Selection Rectangle ──────────────────────────────────────── */
+
+.rubberband-selection {
+  position: absolute;
+  border: 2px solid #00bbff;
+  background: rgba(0, 120, 255, 0.12);
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* ─── Debug Step Visualization ────────────────────────────────────────────── */
+
+/* Active block highlight during debug stepping */
+.cell-overlay.debug-active {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 20px rgba(100, 255, 180, 0.35),
+    0 0 40px rgba(100, 255, 180, 0.15) !important;
+  z-index: 20;
+}
+
+.cell-overlay.debug-active .code-cell {
+  border: 1px solid var(--accent);
+}
+
+/* Directional edge animation — flowing dashes */
+@keyframes dash-flow-forward {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+@keyframes dash-flow-reverse {
+  to {
+    stroke-dashoffset: 40;
+  }
+}
+
+@keyframes edge-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px currentColor); }
+  50% { filter: drop-shadow(0 0 8px currentColor); }
+}
+
+path.debug-edge-active {
+  stroke-dasharray: 12 8 !important;
+  stroke-width: 3 !important;
+  opacity: 1 !important;
+  animation: edge-glow-pulse 1.2s ease-in-out infinite;
+}
+
+path.debug-edge-active.debug-edge-forward {
+  animation:
+    dash-flow-forward 0.6s linear infinite,
+    edge-glow-pulse 1.2s ease-in-out infinite;
+}
+
+path.debug-edge-active.debug-edge-reverse {
+  animation:
+    dash-flow-reverse 0.6s linear infinite,
+    edge-glow-pulse 1.2s ease-in-out infinite;
+}
+
+/* Arrow marker on animated edges — make it pulse */
+path.debug-edge-active + path {
+  animation: edge-glow-pulse 1.2s ease-in-out infinite;
+}
+
+/* Debug toolbar controls */
+.debug-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.debug-controls button {
+  font-size: 14px !important;
+  padding: 4px 8px !important;
+  min-width: 30px;
+}
+
+.debug-controls button.debug-active-btn {
+  background: rgba(100, 255, 180, 0.15) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.debug-step-info {
+  font-size: 11px;
+  color: var(--accent);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debug-speed {
+  width: 60px;
+  font-size: 10px;
+  background: var(--bg-cell);
+  color: var(--text-primary);
+  border: 1px solid var(--border-cell);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  text-align: center;
 }
 
 /* ─── Landing Splash ──────────────────────────────────────────────────────── */
@@ -258,7 +551,7 @@ svg text {
 
 #splash .splash-inner {
   text-align: center;
-  max-width: 480px;
+  max-width: 520px;
   padding: 32px;
 }
 

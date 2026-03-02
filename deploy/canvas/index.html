@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KosmodTS — TypeScript Canvas</title>
+  <meta name="description" content="Interactive TypeScript code cells on a 2D canvas with Monaco editors, matrix operations, and SysML-style dataflow connectors." />
+  <script type="module" crossorigin src="./assets/index-asbHVQ1u.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BGG2yTUQ.css">
+</head>
+<body>
+  <div id="app">
+    <header id="toolbar">
+      <span class="logo">KosmodTS</span>
+      <button id="btn-add-cell" title="Add Code Cell">+ Cell</button>
+      <button id="btn-add-matrix" title="Add Matrix Cell">+ Matrix</button>
+      <button id="btn-run-all" title="Run All Cells">▶ Run All</button>
+      <button id="btn-layout" title="Auto Layout">⊞ Layout</button>
+      <button id="btn-fit" title="Fit to View">⊡ Fit</button>
+      <button id="btn-example" title="Load Example Pipeline">★ Example</button>
+      <span class="spacer"></span>
+      <span class="status" id="status-bar">Ready</span>
+    </header>
+    <div id="graph-container"></div>
+
+    <!-- Landing splash — dismisses on click -->
+    <div id="splash" onclick="this.remove()">
+      <div class="splash-inner">
+        <h1>KosmodTS</h1>
+        <p>Drag-and-drop TypeScript code cells on a 2D canvas — connect them with dataflow edges and watch results propagate in real time.</p>
+        <p>Built with <a href="https://github.com/maxGraph/maxGraph" target="_blank" rel="noopener">maxGraph</a> + <a href="https://microsoft.github.io/monaco-editor/" target="_blank" rel="noopener">Monaco Editor</a>. Forked from <a href="https://github.com/nicognaW/TypeScript-Website" target="_blank" rel="noopener">TypeScript-Website</a>.</p>
+        <button onclick="this.parentElement.parentElement.remove()">Enter ▸</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
