@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KosmodTS — TypeScript Structure Explorer</title>
+  <meta name="description" content="Parse a TypeScript source file into AST-driven snippet blocks on a 2D canvas with Monaco editors, semantic connectors, and full IntelliSense." />
+  <script type="module" crossorigin src="./assets/index-CNscif1X.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BcZQspoW.css">
+</head>
+<body>
+  <div id="app">
+    <header id="toolbar">
+      <span class="logo">KosmodTS</span>
+
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <button id="tab-canvas" class="tab active" title="Block canvas view">Canvas</button>
+        <button id="tab-source" class="tab" title="Full source file editor">Source</button>
+      </div>
+
+      <span class="separator"></span>
+
+      <!-- Canvas actions -->
+      <button id="btn-add-snippet" title="Add a new TypeScript snippet">+ Snippet</button>
+      <button id="btn-refresh" title="Re-parse and rebuild blocks">↻ Re-parse</button>
+      <button id="btn-layout" title="Auto Layout">⊞ Layout</button>
+      <button id="btn-fit" title="Fit to View">⊡ Fit</button>
+      <button id="btn-float" class="btn-float" title="Force-directed float layout (nodes settle by attraction)">🌊 Float</button>
+      <button id="btn-example" title="Load Example Source">★ Example</button>
+
+      <span class="separator"></span>
+
+      <!-- Debug controls -->
+      <div class="debug-controls">
+        <button id="btn-debug-reset" title="Reset debug">⏹</button>
+        <button id="btn-debug-back" title="Step back">⏮</button>
+        <button id="btn-debug-step" title="Step forward">⏭</button>
+        <button id="btn-debug-play" title="Play / Pause">▶</button>
+        <input id="debug-speed" class="debug-speed" type="number" value="1200" min="200" step="200" title="Speed (ms per step)" />
+        <span id="debug-step-info" class="debug-step-info"></span>
+      </div>
+
+      <span class="spacer"></span>
+      <span class="status" id="status-bar">Loading TypeScript...</span>
+    </header>
+
+    <!-- Canvas View (maxGraph + overlays) -->
+    <div id="canvas-view" style="display: flex; flex: 1; overflow: hidden;">
+      <div id="graph-container"></div>
+    </div>
+
+    <!-- Source View (full-file Monaco editor) -->
+    <div id="source-view" style="display: none; flex: 1; overflow: hidden;">
+      <div id="source-editor" style="width: 100%; height: 100%;"></div>
+    </div>
+
+    <!-- Legend panel -->
+    <div id="legend" class="legend-panel">
+      <div class="legend-title">Semantic Edges</div>
+      <div class="legend-item"><span class="legend-line" style="background:#c0a0ff"></span> extends</div>
+      <div class="legend-item"><span class="legend-line dashed" style="background:#80d0ff"></span> implements</div>
+      <div class="legend-item"><span class="legend-line" style="background:#ffa080"></span> instantiates</div>
+      <div class="legend-item"><span class="legend-line" style="background:#64ffb4"></span> calls</div>
+      <div class="legend-item"><span class="legend-line dashed" style="background:#ffdc28"></span> uses variable</div>
+      <div class="legend-item"><span class="legend-line dashed" style="background:#80d0ff"></span> uses type</div>
+    </div>
+
+    <!-- Landing splash — dismisses on click -->
+    <div id="splash" onclick="this.remove()">
+      <div class="splash-inner">
+        <h1>KosmodTS</h1>
+        <p>Write TypeScript in one source file — see it decomposed into structural blocks on a 2D canvas with semantic connectors derived from the AST.</p>
+        <p>Classes, interfaces, functions, variables — each becomes a draggable Monaco block. Connections show extends, implements, calls, and uses relationships.</p>
+        <p>Built with <a href="https://github.com/maxGraph/maxGraph" target="_blank" rel="noopener">maxGraph</a> + <a href="https://microsoft.github.io/monaco-editor/" target="_blank" rel="noopener">Monaco Editor</a> + TypeScript Compiler API. Fully serverless.</p>
+        <button onclick="this.parentElement.parentElement.remove()">Enter ▸</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

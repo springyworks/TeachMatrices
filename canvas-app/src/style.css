@@ -1,0 +1,593 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   KosmodTS — Global Styles
+   TypeScript Structure Explorer with maxGraph + Monaco
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg-primary: #0d0d1a;
+  --bg-secondary: #141428;
+  --bg-cell: #1a1a2e;
+  --border-cell: #2a2a4a;
+  --border-active: #64ffb4;
+  --text-primary: #e0e0e8;
+  --text-secondary: #888;
+  --accent: #64ffb4;
+  --accent-alt: #64c8ff;
+  --error: #ff5050;
+  --warning: #ffdc28;
+  --font-mono: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'SF Mono', 'Consolas', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ─── Toolbar ─────────────────────────────────────────────────────────────── */
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-cell);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+#toolbar .logo {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--accent);
+  margin-right: 8px;
+  letter-spacing: 1px;
+}
+
+#toolbar button {
+  background: var(--bg-cell);
+  border: 1px solid var(--border-cell);
+  color: var(--text-primary);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#toolbar button:hover {
+  background: #252540;
+  border-color: var(--accent);
+}
+
+#toolbar .spacer {
+  flex: 1;
+}
+
+#toolbar .separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border-cell);
+  margin: 0 4px;
+}
+
+#toolbar .status {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* ─── Tab Bar ─────────────────────────────────────────────────────────────── */
+
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  margin-right: 8px;
+}
+
+.tab-bar .tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  padding: 4px 16px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.tab-bar .tab:hover {
+  color: var(--text-primary);
+  background: rgba(100, 200, 255, 0.05);
+}
+
+.tab-bar .tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: rgba(100, 255, 180, 0.08);
+}
+
+/* ─── Graph Container ─────────────────────────────────────────────────────── */
+
+#graph-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 50%, #14142800 0%, var(--bg-primary) 100%),
+    repeating-linear-gradient(0deg, transparent, transparent 19px, #1a1a2e22 19px, #1a1a2e22 20px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, #1a1a2e22 19px, #1a1a2e22 20px);
+}
+
+/* ─── Source Editor View ──────────────────────────────────────────────────── */
+
+#source-view {
+  background: var(--bg-primary);
+}
+
+#source-editor {
+  border-top: 1px solid var(--border-cell);
+}
+
+/* ─── Cell Overlay (positioned absolutely over the SVG graph) ─────────────── */
+
+.cell-overlay {
+  position: absolute;
+  pointer-events: all;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+}
+
+.code-cell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-cell);
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+.code-cell .cell-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #12122a;
+  border-bottom: 1px solid var(--border-cell);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: move;
+  user-select: none;
+}
+
+.code-cell .cell-header .cell-title {
+  flex: 1;
+  color: var(--accent-alt);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-cell .cell-header .cell-type-badge {
+  background: #2a2a4a;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.code-cell .cell-header .export-badge {
+  background: rgba(100, 255, 180, 0.15);
+}
+
+.code-cell .cell-header button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 2px;
+}
+
+.code-cell .cell-header button:hover {
+  color: var(--accent);
+}
+
+.code-cell .editor-area {
+  flex: 1;
+  min-height: 80px;
+  position: relative;
+  pointer-events: all;
+}
+
+.code-cell .result-panel {
+  border-top: 1px solid var(--border-cell);
+  background: #0e0e20;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+  font-size: 12px;
+  pointer-events: all;
+}
+
+.code-cell .result-panel.open {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.code-cell .result-panel .result-content {
+  padding: 6px 8px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.code-cell .result-panel .result-content.error {
+  color: var(--error);
+}
+
+.code-cell .result-panel .result-content.success {
+  color: var(--accent);
+}
+
+.code-cell .result-panel .result-content.info {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* ─── Edge Legend Panel ───────────────────────────────────────────────────── */
+
+.legend-panel {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-cell);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  z-index: 50;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.legend-panel:hover {
+  opacity: 1;
+}
+
+.legend-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 20px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.legend-line.dashed {
+  background: none !important;
+  border-top: 2px dashed currentColor;
+  height: 0;
+}
+
+/* ─── maxGraph overrides ──────────────────────────────────────────────────── */
+
+svg text {
+  font-family: var(--font-mono) !important;
+}
+
+/* maxGraph resize handles (sizer squares) — style them to match dark theme */
+.mxCellEditor {
+  background: transparent !important;
+}
+
+/* ─── Float Button Styling ────────────────────────────────────────────────── */
+
+#toolbar .btn-float {
+  background: linear-gradient(135deg, #1a2040 0%, #1a1a2e 100%);
+  border: 1px solid #3a3a6a;
+  color: var(--accent-alt);
+  transition: all 0.25s ease;
+}
+
+#toolbar .btn-float:hover {
+  background: linear-gradient(135deg, #252560 0%, #1e1e40 100%);
+  border-color: var(--accent-alt);
+  box-shadow: 0 0 12px rgba(100, 200, 255, 0.25);
+}
+
+#toolbar .btn-float.active {
+  background: linear-gradient(135deg, #1a3040 0%, #0e2030 100%);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 16px rgba(100, 255, 180, 0.3);
+  animation: float-pulse 2s ease-in-out infinite;
+}
+
+@keyframes float-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(100, 255, 180, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(100, 255, 180, 0.45); }
+}
+
+/* ─── Height Toggle Button ────────────────────────────────────────────────── */
+
+.code-cell .cell-header .height-toggle-btn {
+  font-size: 10px;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.code-cell .cell-header .height-toggle-btn:hover {
+  opacity: 1;
+  color: var(--accent-alt);
+}
+
+/* ─── Cell Overlay transition for smooth resize ───────────────────────────── */
+
+.cell-overlay {
+  transition: width 0.05s, height 0.05s;
+}
+
+/* ─── Resize Handles ──────────────────────────────────────────────────────── */
+
+.resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #00FF00;
+  border: 1px solid #000;
+  border-radius: 1px;
+  z-index: 30;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.1s, box-shadow 0.1s;
+  pointer-events: all;
+}
+
+.cell-overlay:hover .resize-handle,
+.cell-overlay.selected .resize-handle {
+  opacity: 1;
+}
+
+.resize-handle:hover {
+  background: #44ff44;
+  box-shadow: 0 0 6px rgba(0, 255, 0, 0.6);
+}
+
+.resize-handle:active {
+  background: #00cc00;
+  border-color: #00cc00;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+}
+
+/* Positions for each handle */
+.resize-nw { top: -4px;  left: -4px; }
+.resize-n  { top: -4px;  left: 50%;  transform: translateX(-50%); }
+.resize-ne { top: -4px;  right: -4px; }
+.resize-w  { top: 50%;   left: -4px;  transform: translateY(-50%); }
+.resize-e  { top: 50%;   right: -4px; transform: translateY(-50%); }
+.resize-sw { bottom: -4px; left: -4px; }
+.resize-s  { bottom: -4px; left: 50%; transform: translateX(-50%); }
+.resize-se { bottom: -4px; right: -4px; }
+
+/* ─── Selection Highlight ─────────────────────────────────────────────────── */
+
+.cell-overlay.selected {
+  box-shadow:
+    0 0 0 2px #00FF00,
+    0 0 14px rgba(0, 255, 0, 0.25),
+    0 2px 12px rgba(0, 0, 0, 0.5) !important;
+  z-index: 15;
+}
+
+.cell-overlay.selected .code-cell {
+  border: 1px solid #00cc00;
+}
+
+/* Don't override debug-active highlight */
+.cell-overlay.debug-active.selected {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 20px rgba(100, 255, 180, 0.35),
+    0 0 40px rgba(100, 255, 180, 0.15) !important;
+}
+
+/* ─── Rubberband Selection Rectangle ──────────────────────────────────────── */
+
+.rubberband-selection {
+  position: absolute;
+  border: 2px solid #00bbff;
+  background: rgba(0, 120, 255, 0.12);
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* ─── Debug Step Visualization ────────────────────────────────────────────── */
+
+/* Active block highlight during debug stepping */
+.cell-overlay.debug-active {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 20px rgba(100, 255, 180, 0.35),
+    0 0 40px rgba(100, 255, 180, 0.15) !important;
+  z-index: 20;
+}
+
+.cell-overlay.debug-active .code-cell {
+  border: 1px solid var(--accent);
+}
+
+/* Directional edge animation — flowing dashes */
+@keyframes dash-flow-forward {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+@keyframes dash-flow-reverse {
+  to {
+    stroke-dashoffset: 40;
+  }
+}
+
+@keyframes edge-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px currentColor); }
+  50% { filter: drop-shadow(0 0 8px currentColor); }
+}
+
+path.debug-edge-active {
+  stroke-dasharray: 12 8 !important;
+  stroke-width: 3 !important;
+  opacity: 1 !important;
+  animation: edge-glow-pulse 1.2s ease-in-out infinite;
+}
+
+path.debug-edge-active.debug-edge-forward {
+  animation:
+    dash-flow-forward 0.6s linear infinite,
+    edge-glow-pulse 1.2s ease-in-out infinite;
+}
+
+path.debug-edge-active.debug-edge-reverse {
+  animation:
+    dash-flow-reverse 0.6s linear infinite,
+    edge-glow-pulse 1.2s ease-in-out infinite;
+}
+
+/* Arrow marker on animated edges — make it pulse */
+path.debug-edge-active + path {
+  animation: edge-glow-pulse 1.2s ease-in-out infinite;
+}
+
+/* Debug toolbar controls */
+.debug-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.debug-controls button {
+  font-size: 14px !important;
+  padding: 4px 8px !important;
+  min-width: 30px;
+}
+
+.debug-controls button.debug-active-btn {
+  background: rgba(100, 255, 180, 0.15) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.debug-step-info {
+  font-size: 11px;
+  color: var(--accent);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debug-speed {
+  width: 60px;
+  font-size: 10px;
+  background: var(--bg-cell);
+  color: var(--text-primary);
+  border: 1px solid var(--border-cell);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+/* ─── Landing Splash ──────────────────────────────────────────────────────── */
+
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 13, 26, 0.92);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+#splash .splash-inner {
+  text-align: center;
+  max-width: 520px;
+  padding: 32px;
+}
+
+#splash h1 {
+  font-size: 28px;
+  color: var(--accent);
+  margin-bottom: 12px;
+  letter-spacing: 2px;
+}
+
+#splash p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+#splash a {
+  color: var(--accent-alt);
+  text-decoration: none;
+}
+
+#splash a:hover {
+  text-decoration: underline;
+}
+
+#splash button {
+  margin-top: 16px;
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+  padding: 8px 28px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+}

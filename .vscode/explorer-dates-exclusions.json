@@ -1,7 +1,12 @@
 {
   "exclusions": [
-    ".vscode"
+    ".vscode",
+    ".git",
+    "logs",
+    "dist",
+    "node_modules",
+    ".cache"
   ],
-  "updatedAt": "2026-02-27T11:37:43.389Z",
+  "updatedAt": "2026-02-27T16:02:20.542Z",
   "version": 1
 }

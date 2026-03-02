@@ -1,0 +1,20 @@
+{
+  "name": "kosmod-ts-maxgraph-monaco",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "2D TypeScript canvas — maxGraph cells with embedded Monaco editors, reactive dataflow, matrix operations",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@maxgraph/core": "^0.22.0",
+    "monaco-editor": "^0.52.2",
+    "typescript": "^5.7.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
